@@ -27,18 +27,24 @@ package object Comete {
     }
   }
 
-  def rhoCMTGen(alpha: Double, beta: Double): MedidaPol = {
+  def rhoCMT_Gen(alpha: Double, beta: Double): MedidaPol = {
+    //entra una distribución
     distribution =>
+      // se toma la distribución y se descompone en dos listas (frenquencies, values)
       val (frequencies, values) = distribution
 
-      // Función auxiliar rhoAux que calcula ρΠ_aux(p)
+      // Función auxiliar para calcular rho en un punto dado
       def rhoAux(p: Double): Double = {
         frequencies.zip(values).map {
           case (pi, yi) => Math.pow(pi, alpha) * Math.pow(Math.abs(yi - p), beta)
         }.sum
       }
-      // Usa min_p para encontrar el valor mínimo de rhoAux en el rango [0, 1]
-      min_p(rhoAux, 0.0, 1.0, 0.01)
-  }
 
+      // Usamos min_p para encontrar el mínimo punto de polarización
+      val min = min_p(rhoAux, 0.0, 1.0, 0.01)
+      val resultado = rhoAux(min)
+
+      // Si el valor es muy pequeño, lo redondeamos a 0; de lo contrario, redondeamos el resultado a 3 decimales
+      if (Math.abs(resultado) < 1e-3) 0.0 else Math.round(resultado * 1000) / 1000.0
+  }
 }
