@@ -2,7 +2,7 @@ package object Comete {
   type DistributionValues= Vector[Double]
   type Frequency = Vector[Double]
   type MedidaPol = Distribution => Double
-  type PolMeasure = Distribution => Double
+  type PolMeasure = Distribution => Double// creo que este typo de dato esta de mas basta con dejar MedidaPol
   type Distribution = (Frequency, DistributionValues)
 
   def listaPuntos(punto: Double, min: Double, max: Double): List[Double] = {
@@ -46,5 +46,15 @@ package object Comete {
 
       // Si el valor es muy pequeño, lo redondeamos a 0; de lo contrario, redondeamos el resultado a 3 decimales
       if (Math.abs(resultado) < 1e-3) 0.0 else Math.round(resultado * 1000) / 1000.0
+  }
+  // La función normalizar toma una medida de polarización y la ajusta al intervalo [0,1],
+  // utilizando el peor caso de polarización como referencia
+  def normalizar(m: MedidaPol): MedidaPol = {
+    // Calcula la polarización en el peor caso (50% en extremos izquierdo y derecho)
+    val worstCasePolarization = m((Vector(0.5, 0.0, 0.0, 0.0, 0.5), Vector(0.0, 0.25, 0.5, 0.75, 1.0)))
+    (distribution: Distribution) => {
+      val polarization = m(distribution)
+      polarization / worstCasePolarization
+    }
   }
 }
