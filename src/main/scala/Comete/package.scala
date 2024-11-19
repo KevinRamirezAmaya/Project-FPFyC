@@ -1,36 +1,29 @@
 package object Comete {
-  type DistributionValues= Vector[Double]
+  type DistributionValues = Vector[Double]
   type Frequency = Vector[Double]
   type MedidaPol = Distribution => Double
-  type PolMeasure = Distribution => Double// creo que este typo de dato esta de mas basta con dejar MedidaPol
   type Distribution = (Frequency, DistributionValues)
 
-  def listaPuntos(punto: Double, min: Double, max: Double): List[Double] = {
-    if (min > max) Nil
-    else min :: listaPuntos(punto, min + punto, max)
-  }
-
+  // Encuentra el mínimo de una función f en el intervalo [min, max] con precisión prec
   def min_p(f: Double => Double, min: Double, max: Double, prec: Double): Double = {
     if (max - min < prec) {
       (min + max) / 2
     } else {
       val punto = (max - min) / 10
-      val puntos = listaPuntos(punto, min, max)
-      val minPoint1 = puntos.map(x => (f(x), x))
-      val minPoint = minPoint1.minBy(_._1)
+      val puntos = (0 to 10).map(i => min + i * punto) // Genera puntos de forma directa en el intervalo
+      val minPoint = puntos.map(x => (f(x), x)).minBy(_._1)
+
       if (minPoint._2 + punto > max || minPoint._2 - punto < min) {
         minPoint._2
-      }
-      else {
+      } else {
         min_p(f, minPoint._2 - punto, minPoint._2 + punto, prec)
       }
     }
   }
 
+  // Genera una medida de polarización parametrizada con alpha y beta
   def rhoCMT_Gen(alpha: Double, beta: Double): MedidaPol = {
-    //entra una distribución
     distribution =>
-      // se toma la distribución y se descompone en dos listas (frenquencies, values)
       val (frequencies, values) = distribution
 
       // Función auxiliar para calcular rho en un punto dado
@@ -47,8 +40,8 @@ package object Comete {
       // Si el valor es muy pequeño, lo redondeamos a 0; de lo contrario, redondeamos el resultado a 3 decimales
       if (Math.abs(resultado) < 1e-3) 0.0 else Math.round(resultado * 1000) / 1000.0
   }
-  // La función normalizar toma una medida de polarización y la ajusta al intervalo [0,1],
-  // utilizando el peor caso de polarización como referencia
+
+  // Normaliza una medida de polarización ajustándola al intervalo [0,1]
   def normalizar(m: MedidaPol): MedidaPol = {
     // Calcula la polarización en el peor caso (50% en extremos izquierdo y derecho)
     val worstCasePolarization = m((Vector(0.5, 0.0, 0.0, 0.0, 0.5), Vector(0.0, 0.25, 0.5, 0.75, 1.0)))
