@@ -5,7 +5,7 @@ import scala.collection.parallel.CollectionConverters._
 package object Opinion {
   type SpecificBelief = Vector[Double]
   type GenericBeliefConf = Int => SpecificBelief
- // type GenericBelief =  Int => SpecificBeliefConf// este type lo sugiere el proyecto en la paguina 5 pero en la estructura del paquete opinion ya no aparese
+  //type GenericBelief =  Int => SpecificBeliefConf// este type lo sugiere el proyecto en la paguina 5 pero en la estructura del paquete opinion ya no aparese
   type AgentsPolMeasure = (SpecificBelief, DistributionValues) => Double
 
   // Función de creencia uniforme
@@ -45,23 +45,40 @@ package object Opinion {
 
   // Función rho que representa la medida de polarización entre agentes en proceso de creaciòn dado que no pasa las pruebas
   def rho(alpha: Double, beta: Double): AgentsPolMeasure = {
-    (sb: SpecificBelief, d: DistributionValues) => {
-      require(sb.forall(b => b >= 0 && b <= 1), "Las creencias deben estar entre 0 y 1")
+    (agentes: SpecificBelief, distribucion: DistributionValues) => {
+      val k = distribucion.length - 1
 
-      // Para cada creencia, calculamos su contribución a la polarización
-      val n = sb.length.toDouble
+      val intervalos = distribucion.zipWithIndex.map { case (_, i) =>
+        if (i == 0) List(distribucion.head, distribucion.tail.head / 2)
+        else if (0 < i && i < k) List(
+          (distribucion.drop(i).head + distribucion.drop(i - 1).head) / 2,
+          (distribucion.drop(i).head + distribucion.drop(i + 1).head) / 2
+        )
+        else List(
+          (distribucion.drop(k - 1).head + distribucion.drop(k).head) / 2,
+          distribucion.drop(k).head
+        )
+      }
 
-      // Calculamos la polarización para cada agente
-      val polarizationSum = sb.map { belief =>
-        // Encontramos el valor más cercano en la distribución
-        val closestValue = d.minBy(x => math.abs(x - belief))        
-        math.pow(belief, alpha) * math.pow(math.abs(closestValue - belief), beta)
-      }.sum
-      // Normalizamos el resultado dividiendo por el número de agentes
-      val normalizedResult = polarizationSum / n      
-      if (normalizedResult < 0.001) 0.0
-      else if (sb.forall(b => b == 0.0 || b == 1.0)) 1.0  // Caso extremo
-      else normalizedResult
+      val agrupados = intervalos.map { interval =>
+        val min = interval.head
+        val max = interval.last
+        if (intervalos.indexOf(interval) < k)
+          agentes.filter(x => min <= x && x < max)
+        else
+          agentes.filter(x => min <= x && x <= max)
+      }
+
+      val pi_b = agrupados.map { grupo =>
+        if (grupo.isEmpty) 0.0
+        else grupo.length.toDouble / agentes.length.toDouble
+      }.toVector
+
+      val distribution: Distribution = (pi_b, distribucion)
+      val rho_b = rhoCMT_Gen(alpha, beta)
+      val norm: MedidaPol = normalizar(rho_b)
+
+      norm(distribution)
     }
   }
 
@@ -70,7 +87,7 @@ package object Opinion {
   type SpecificWeightedGraph = (WeightedGraph, Int)
   type GenericWeightedGraph = Int => SpecificWeightedGraph
 
-  // Función de influencia tipo 1
+  // Función de influencia tipo 1 pagina 7
   def i1(nags: Int): SpecificWeightedGraph = {
     ((i: Int, j: Int) => if (i == j) 1.0 else if (i < j) 1.0 / (j - i).toDouble else 0.0, nags)
   }
@@ -84,7 +101,7 @@ package object Opinion {
   type FunctionUpdate = (SpecificBelief, SpecificWeightedGraph) => SpecificBelief//el proyecto sugiere SpecificBeliefConf
 
   // Función para actualizar creencias con sesgo de confirmación
-  def confBiasUpdate(sb: SpecificBelief, swg: SpecificWeightedGraph): SpecificBelief = {// el proyecto sugiere SpecificBeliefConf
+  def confBiasUpdate(sb: SpecificBelief, swg: SpecificWeightedGraph): SpecificBelief = {// el proyecto sugiere SpecificBeliefConf revisar
     val (graph, n) = swg
 
     def actualizarCreencia(i: Int): Double = {
@@ -100,6 +117,7 @@ package object Opinion {
   }
 
   // Función para simular la evolución de la opinión
+  //type FunctionUpdate = (SpecifieBeliefConf, SpecificWeightedGraph ) => SpecifieBeliefConf // este type lo sugiere el proyecto en la paguina 8 para crear la funciòn simulate
   def simulate(fu: FunctionUpdate, swg: SpecificWeightedGraph, b0: SpecificBelief, t: Int): IndexedSeq[SpecificBelief] = {
     def iterar(tiempo: Int, belief: SpecificBelief, acc: IndexedSeq[SpecificBelief]): IndexedSeq[SpecificBelief] = {
       if (tiempo <= 0) acc
