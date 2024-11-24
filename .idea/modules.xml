@@ -2,8 +2,8 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/Project-FPFyC.iml" filepath="$PROJECT_DIR$/.idea/modules/Project-FPFyC.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/Project-FPFyC.Project-FPFyC-build.iml" filepath="$PROJECT_DIR$/.idea/modules/Project-FPFyC.Project-FPFyC-build.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/SimuladorDePolarizacionEnRedes.iml" filepath="$PROJECT_DIR$/.idea/modules/SimuladorDePolarizacionEnRedes.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/SimuladorDePolarizacionEnRedes-build.iml" filepath="$PROJECT_DIR$/.idea/modules/SimuladorDePolarizacionEnRedes-build.iml" />
     </modules>
   </component>
 </project>
