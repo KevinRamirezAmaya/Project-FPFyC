@@ -3,7 +3,7 @@ import scala.util.DynamicVariable
 
 package object common {
   val forkJoinPool = new ForkJoinPool
-
+//abstract class
   abstract class TaskScheduler {
     def schedule[T](body: => T): ForkJoinTask[T]
     def parallel[A, B](taskA: => A, taskB: => B): (A, B) = {

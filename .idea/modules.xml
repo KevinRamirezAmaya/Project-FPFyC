@@ -3,7 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/SimuladorDePolarizacionEnRedes.iml" filepath="$PROJECT_DIR$/.idea/modules/SimuladorDePolarizacionEnRedes.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/SimuladorDePolarizacionEnRedes-build.iml" filepath="$PROJECT_DIR$/.idea/modules/SimuladorDePolarizacionEnRedes-build.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/SimuladorDePolarizacionEnRedes.SimuladorDePolarizacionEnRedes-build.iml" filepath="$PROJECT_DIR$/.idea/modules/SimuladorDePolarizacionEnRedes.SimuladorDePolarizacionEnRedes-build.iml" />
     </modules>
   </component>
 </project>
