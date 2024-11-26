@@ -1,5 +1,5 @@
 import Comete._
-import common._
+
 import scala.collection.parallel.CollectionConverters._
 
 package object Opinion {
@@ -89,13 +89,13 @@ package object Opinion {
   //type GenericWeightedGraph = Int => SpecificWeightedGraph// no se esta empleando
 
   // Función de influencia tipo 1 pagina 7
- // def i1(nags: Int): SpecificWeightedGraph = {
-   // ((i: Int, j: Int) => if (i == j) 1.0 else if (i < j) 1.0 / (j - i).toDouble else 0.0, nags)
- // }
+  // def i1(nags: Int): SpecificWeightedGraph = {
+  // ((i: Int, j: Int) => if (i == j) 1.0 else if (i < j) 1.0 / (j - i).toDouble else 0.0, nags)
+  // }
 
   // Función de influencia tipo 2
   //def i2(nags: Int): SpecificWeightedGraph = {
-    //((i: Int, j: Int) => if (i == j) 1.0 else if (i < j) (j - i).toDouble / nags.toDouble else (nags - (i - j)).toDouble / nags.toDouble, nags)
+  //((i: Int, j: Int) => if (i == j) 1.0 else if (i < j) (j - i).toDouble / nags.toDouble else (nags - (i - j)).toDouble / nags.toDouble, nags)
   //}
 
   // Tipo de función para actualizar creencias basada en un grafo ponderado específico
@@ -139,63 +139,53 @@ package object Opinion {
 
   // Versión paralela de rho que representa la medida de polarización entre agentes
   def rhoPar(alpha: Double, beta: Double): AgentsPolMeasure = {
-    (agentes: SpecificBelief, distribucion: DistributionValues) => {
-      val k = distribucion.length - 1
+    (specificBelief: SpecificBelief, distributionValues: DistributionValues) => {
+      val numAgents = specificBelief.length
+      val k = distributionValues.length
 
-      // Paralelización para construir los intervalos
-      val intervalos = distribucion.zipWithIndex.par.map { case (_, i) =>
-        if (i == 0) List(distribucion.head, distribucion.tail.head / 2)
-        else if (0 < i && i < k) List(
-          (distribucion.drop(i).head + distribucion.drop(i - 1).head) / 2,
-          (distribucion.drop(i).head + distribucion.drop(i + 1).head) / 2
-        )
-        else List(
-          (distribucion.drop(k - 1).head + distribucion.drop(k).head) / 2,
-          distribucion.drop(k).head
-        )
-      }.toList // Convertir de nuevo a secuencia estándar
+      val firstInterval = (0.0, distributionValues(1)/2)
+      val middleIntervals = (1 to k-2).par.map(i =>
+        ((distributionValues(i)+distributionValues(i-1))/2, (distributionValues(i)+distributionValues(i+1))/2)).toVector
+      val lastInterval = ((distributionValues(k-2)+1)/2, 1.0)
 
-      // Paralelización para agrupar agentes en intervalos
-      val agrupados = intervalos.par.map { interval =>
-        val min = interval.head
-        val max = interval.last
-        if (intervalos.indexOf(interval) < k)
-          agentes.filter(x => min <= x && x < max)
-        else
-          agentes.filter(x => min <= x && x <= max)
-      }.toList
+      val intervals = firstInterval +: middleIntervals :+ lastInterval
 
-      // Paralelización para calcular las frecuencias pi_b
-      val pi_b = agrupados.par.map { grupo =>
-        if (grupo.isEmpty) 0.0
-        else grupo.length.toDouble / agentes.length.toDouble
-      }.toVector
+      val emptyClassification = (0 until k).map(i => i -> Vector.empty[Double]).toMap
+      val classification = specificBelief.par.groupBy(a => intervals.zipWithIndex.indexWhere {
+        case ((start, end), i) =>
+          if(i == k-1) (start <= a && a <= end)
+          else (start <= a && a < end)
+      })
+      val finalClassification = (emptyClassification ++ classification).toSeq.sortBy(_._1)
 
-      // Creación de la distribución y cálculo de polarización
-      val distribution: Distribution = (pi_b, distribucion)
-      val rho_b = rhoCMT_Gen(alpha, beta)
-      val norm: MedidaPol = normalizar(rho_b)
+      val frequency = finalClassification.map{ case (i, values) => values.knownSize.toDouble/numAgents}.toVector
 
-      norm(distribution)
+      val rhoAux = rhoCMT_Gen(alpha, beta)
+      val normalizarAux = normalizar(rhoAux)
+      normalizarAux((frequency, distributionValues))
     }
   }
+  def confBiasUpdatePar(sb: SpecificBelief, swg: SpecificWeightedGraph): SpecificBelief = {
+    val (influencias, _) = swg
+
+    def parallelAux(subSb: SpecificBelief): SpecificBelief = {
+      val n = subSb.length
+      (0 until n).par.map { i =>
+        val suma = (0 until n).par.map { j =>
+          (1 - math.abs(subSb(j) - subSb(i))) * influencias(j, i) * (subSb(j) - subSb(i))
+        }.sum
+        subSb(i) + suma / n
+      }.toVector
+    }
+
+    val (left, right) = sb.splitAt(sb.length / 2)
+    val res1 = parallelAux(left)
+    val res2 = parallelAux(right)
+    res1 ++ res2
+  }
+
+
 
   // Versión paralela de confBiasUpdate
-  def confBiasUpdatePar(sb: SpecificBelief, swg: SpecificWeightedGraph): SpecificBelief = {
-    val (influencias, agentes) = swg
-
-    (0 until agentes).par.map { i =>
-      val a = (0 until agentes).par.filter(j => influencias(j, i) > 0)
-
-      if (a.isEmpty) sb(i)
-      else {
-        val actualizacion = a.map { j =>
-          val beta = 1 - math.abs(sb(j) - sb(i))
-          beta * influencias(j, i) * (sb(j) - sb(i))
-        }.sum / a.size
-        sb(i) + actualizacion
-      }
-    }.toVector
-  }
 
 }

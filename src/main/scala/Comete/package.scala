@@ -1,23 +1,27 @@
 package object Comete {
   type DistributionValues = Vector[Double]
   type Frequency = Vector[Double]
-  type MedidaPol = Distribution => Double
   type Distribution = (Frequency, DistributionValues)
+  type MedidaPol = Distribution => Double
+
 
   // Encuentra el mínimo de una función f en el intervalo [min, max] con precisión prec
+  def listaPuntos(punto: Double, min: Double, max: Double): List[Double] = {
+    if (min > max) Nil
+    else min :: listaPuntos(punto, min + punto, max)
+  }
+
   def min_p(f: Double => Double, min: Double, max: Double, prec: Double): Double = {
     if (max - min < prec) {
       (min + max) / 2
     } else {
       val punto = (max - min) / 10
-      val puntos = (0 to 10).map(i => min + i * punto) // Genera puntos de forma directa en el intervalo
-      val minPoint = puntos.map(x => (f(x), x)).minBy(_._1)
-
-      if (minPoint._2 + punto > max || minPoint._2 - punto < min) {
-        minPoint._2
-      } else {
-        min_p(f, minPoint._2 - punto, minPoint._2 + punto, prec)
-      }
+      val puntos = listaPuntos(punto, min, max)
+      val minPoint1 = puntos.map(x => (f(x), x))
+      val minPoint = minPoint1.minBy(_._1)
+      val nuevoMin = math.max(min, minPoint._2 - punto)
+      val nuevoMax = math.min(max, minPoint._2 + punto)
+      min_p(f, nuevoMin, nuevoMax, prec)
     }
   }
 

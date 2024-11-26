@@ -216,7 +216,6 @@ val sbts = for {
 
 
 //Ejemplo graficar y generar los archivos html
-
 val evolsSec = for {
   i <- 0 until sbms.length
 } yield simEvolucion(Seq(sbms(i),sbes(i),sbts(i)),
