@@ -165,23 +165,22 @@ package object Opinion {
       normalizarAux((frequency, distributionValues))
     }
   }
-  def confBiasUpdatePar(sb: SpecificBelief, swg: SpecificWeightedGraph): SpecificBelief = {
-    val (influencias, _) = swg
+  def confBiasUpdate(sb: SpecificBelief, swg: SpecificWeightedGraph): SpecificBelief = {
+    val NoAgente = sb.size // Número de agentes
+    val InfluenciaAgentes = swg._1  // Función de influencia entre agentes
 
-    def parallelAux(subSb: SpecificBelief): SpecificBelief = {
-      val n = subSb.length
-      (0 until n).par.map { i =>
-        val suma = (0 until n).par.map { j =>
-          (1 - math.abs(subSb(j) - subSb(i))) * influencias(j, i) * (subSb(j) - subSb(i))
-        }.sum
-        subSb(i) + suma / n
-      }.toVector
+    // Calcula la nueva creencia para un agente
+    def actualizarCreencia(i: Int): Double = {
+      val influencias = (0 until NoAgente).map { j =>
+        val diferencia = sb(j) - sb(i) // Diferencia en creencias
+        val sesgo = 1 - math.abs(diferencia) // Sesgo de confirmación basado en proximidad
+        sesgo * InfluenciaAgentes(j, i) * diferencia // Contribución del agente j a i
+      }
+      val sumaInfluencias = influencias.sum
+      sb(i) + sumaInfluencias / (i + 1) // Ajusta la creencia normalizando por el índice
     }
-
-    val (left, right) = sb.splitAt(sb.length / 2)
-    val res1 = parallelAux(left)
-    val res2 = parallelAux(right)
-    res1 ++ res2
+    // Aplica la actualización a cada agente
+    sb.indices.map(actualizarCreencia).toVector
   }
 
 
