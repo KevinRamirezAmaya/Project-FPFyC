@@ -102,21 +102,22 @@ package object Opinion {
   type FunctionUpdate = (SpecificBelief, SpecificWeightedGraph) => SpecificBelief//el proyecto sugiere SpecificBeliefConf
 
   // Función para actualizar creencias con sesgo de confirmación
-  def confBiasUpdate(b: SpecificBelief, swg: SpecificWeightedGraph): SpecificBelief = {//el proyecto sugiere SpecificBeliefConf
-    val (influencias, agentes) = swg
+  def confBiasUpdate(sb: SpecificBelief, swg: SpecificWeightedGraph): SpecificBelief = {
+    val NoAgente = sb.size // Número de agentes
+    val InfluenciaAgentes = swg._1  // Función de influencia entre agentes
 
-    (0 until agentes).map { i =>
-      val a = (0 until agentes).filter(j => influencias(j, i) > 0)
-
-      if (a.isEmpty) b(i)
-      else {
-        val actualizacion = a.map { j =>
-          val beta = 1 - math.abs(b(j) - b(i))
-          beta * influencias(j, i) * (b(j) - b(i))
-        }.sum / a.length
-        b(i) + actualizacion
+    // Calcula la nueva creencia para un agente
+    def actualizarCreencia(i: Int): Double = {
+      val influencias = (0 until NoAgente).map { j =>
+        val diferencia = sb(j) - sb(i) // Diferencia en creencias
+        val sesgo = 1 - math.abs(diferencia) // Sesgo de confirmación basado en proximidad
+        sesgo * InfluenciaAgentes(j, i) * diferencia // Contribución del agente j a i
       }
-    }.toVector
+      val sumaInfluencias = influencias.sum
+      sb(i) + sumaInfluencias / (i + 1) // Ajusta la creencia normalizando por el índice
+    }
+    // Aplica la actualización a cada agente
+    sb.indices.map(actualizarCreencia).toVector
   }
   // Función para mostrar el grafo ponderado
   def showWeightedGraph(swg: SpecificWeightedGraph): IndexedSeq[IndexedSeq[Double]] = {
@@ -165,26 +166,24 @@ package object Opinion {
       normalizarAux((frequency, distributionValues))
     }
   }
-  def confBiasUpdate(sb: SpecificBelief, swg: SpecificWeightedGraph): SpecificBelief = {
-    val NoAgente = sb.size // Número de agentes
-    val InfluenciaAgentes = swg._1  // Función de influencia entre agentes
+  def confBiasUpdatePar(sb: SpecificBelief, swg: SpecificWeightedGraph): SpecificBelief = {
+    val (influencias, _) = swg
 
-    // Calcula la nueva creencia para un agente
-    def actualizarCreencia(i: Int): Double = {
-      val influencias = (0 until NoAgente).map { j =>
-        val diferencia = sb(j) - sb(i) // Diferencia en creencias
-        val sesgo = 1 - math.abs(diferencia) // Sesgo de confirmación basado en proximidad
-        sesgo * InfluenciaAgentes(j, i) * diferencia // Contribución del agente j a i
-      }
-      val sumaInfluencias = influencias.sum
-      sb(i) + sumaInfluencias / (i + 1) // Ajusta la creencia normalizando por el índice
+    def parallelAux(subSb: SpecificBelief): SpecificBelief = {
+      val n = subSb.length
+      (0 until n).par.map { i =>
+        val suma = (0 until n).par.map { j =>
+          val dif = subSb(j) - subSb(i)
+          val sesgo = 1 - math.abs(dif)
+          sesgo * influencias(j, i) * dif.toDouble // Aseguramos Double para evitar conflictos
+        }.sum
+        subSb(i) + suma / n
+      }.toVector
     }
-    // Aplica la actualización a cada agente
-    sb.indices.map(actualizarCreencia).toVector
+
+    val (left, right) = sb.splitAt(sb.length / 2)
+    val res1 = parallelAux(left)
+    val res2 = parallelAux(right)
+    res1 ++ res2
   }
-
-
-
-  // Versión paralela de confBiasUpdate
-
 }

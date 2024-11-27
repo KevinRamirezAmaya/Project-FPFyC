@@ -193,11 +193,46 @@ val resultados = cmp1 .map( t => t ._6)
 
 
 // Ejemplo confUpdatePar pagina 10
+val i1_16384 = i1(16384)
+val i2_16384 = i2(16384)
+compararFuncionesAct(sbms.take(sbms.length/2),
+  i2_16384, confBiasUpdate, confBiasUpdatePar)
+
 val i1_32768 = i1(32768)
 val i2_32768 = i2(32768)
+
 compararFuncionesAct(sbms.take(sbms.length/2),
   i2_32768, confBiasUpdate, confBiasUpdatePar)
 
+val i1_65536 = i1(65536)
+val i2_65536 = i2(65536)
+
+compararFuncionesAct(sbms.take(sbms.length/2),
+  i2_65536, confBiasUpdate, confBiasUpdatePar)
+
+val i1_131072 = i1(131072)
+val i2_131072 = i2(131072)
+
+compararFuncionesAct(sbms.take(sbms.length/2),
+  i2_131072, confBiasUpdate, confBiasUpdatePar)
+
+val i1_262144 = i1(262144)
+val i2_262144 = i2(262144)
+
+compararFuncionesAct(sbms.take(sbms.length/2),
+  i2_262144, confBiasUpdate, confBiasUpdatePar)
+
+val i1_524288 = i1(524288)
+val i2_524288 = i2(524288)
+
+compararFuncionesAct(sbms.take(sbms.length/2),
+  i2_524288, confBiasUpdate, confBiasUpdatePar)
+
+val i1_1048576 = i1(1048576)
+val i2_1048576 = i2(1048576)
+
+compararFuncionesAct(sbms.take(sbms.length/2),
+  i2_1048576, confBiasUpdate, confBiasUpdatePar)
 //
 val sbms = for{
   n <- 2 until 16
