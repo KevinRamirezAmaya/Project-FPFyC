@@ -1,6 +1,7 @@
 import Comete._
-
 import scala.collection.parallel.CollectionConverters._
+import scala.math._
+import common.parallel
 
 package object Opinion {
   type SpecificBelief = Vector[Double]
@@ -166,24 +167,33 @@ package object Opinion {
       normalizarAux((frequency, distributionValues))
     }
   }
+
   def confBiasUpdatePar(sb: SpecificBelief, swg: SpecificWeightedGraph): SpecificBelief = {
     val (influencias, _) = swg
 
-    def parallelAux(subSb: SpecificBelief): SpecificBelief = {
+    def computePart(subSb: SpecificBelief): SpecificBelief = {
       val n = subSb.length
-      (0 until n).par.map { i =>
-        val suma = (0 until n).par.map { j =>
+      (0 until n).map { i =>
+        val suma = (0 until n).map { j =>
           val dif = subSb(j) - subSb(i)
-          val sesgo = 1 - math.abs(dif)
-          sesgo * influencias(j, i) * dif.toDouble // Aseguramos Double para evitar conflictos
+          val sesgo = 1 - abs(dif)
+          sesgo * influencias(j, i) * dif.toDouble
         }.sum
         subSb(i) + suma / n
       }.toVector
     }
 
+    // Dividimos el vector en dos mitades
     val (left, right) = sb.splitAt(sb.length / 2)
-    val res1 = parallelAux(left)
-    val res2 = parallelAux(right)
-    res1 ++ res2
+
+    // Procesamos cada mitad en paralelo
+    val (resLeft, resRight) = parallel(
+      computePart(left),
+      computePart(right)
+    )
+
+    // Combinamos los resultados
+    resLeft ++ resRight
   }
+
 }
