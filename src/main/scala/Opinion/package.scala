@@ -1,7 +1,7 @@
 import Comete._
 import scala.collection.parallel.CollectionConverters._
 import scala.math._
-import common.parallel
+import common._
 
 package object Opinion {
   type SpecificBelief = Vector[Double]
@@ -105,26 +105,28 @@ package object Opinion {
   // Función para actualizar creencias con sesgo de confirmación
   def confBiasUpdate(sb: SpecificBelief, swg: SpecificWeightedGraph): SpecificBelief = {
     val NoAgente = sb.size // Número de agentes
-    val InfluenciaAgentes = swg._1  // Función de influencia entre agentes
+    val InfluenciaAgentes = swg._1 // Matriz de influencias entre agentes
 
-    // Calcula la nueva creencia para un agente
+    // Calcula la nueva creencia optimizando el cálculo y aplicando truncamiento
     def actualizarCreencia(i: Int): Double = {
-      val influencias = (0 until NoAgente).map { j =>
-        val diferencia = sb(j) - sb(i) // Diferencia en creencias
-        val sesgo = 1 - math.abs(diferencia) // Sesgo de confirmación basado en proximidad
-        sesgo * InfluenciaAgentes(j, i) * diferencia // Contribución del agente j a i
-      }
-      val sumaInfluencias = influencias.sum
-      sb(i) + sumaInfluencias / (i + 1) // Ajusta la creencia normalizando por el índice
+      // Filtra y calcula influencias en una sola pasada para agentes relevantes
+      val sumaInfluencias = (0 until NoAgente).iterator.filter(j => InfluenciaAgentes(j, i) > 0).map { j =>
+        val diferencia = sb(j) - sb(i)
+        val sesgo = 1 - math.abs(diferencia)
+        sesgo * InfluenciaAgentes(j, i) * diferencia
+      }.sum
+
+      // Calcula la nueva creencia normalizando por el número de agentes influyentes
+      val nuevaCreencia = if (sumaInfluencias != 0) sb(i) + sumaInfluencias / NoAgente else sb(i)
+
+      // Truncar a 4 decimales
+      BigDecimal(nuevaCreencia).setScale(4, BigDecimal.RoundingMode.DOWN).toDouble
     }
-    // Aplica la actualización a cada agente
+
+    // Aplica la actualización a cada agente utilizando índices para evitar búsquedas repetidas
     sb.indices.map(actualizarCreencia).toVector
   }
-  // Función para mostrar el grafo ponderado
-  def showWeightedGraph(swg: SpecificWeightedGraph): IndexedSeq[IndexedSeq[Double]] = {
-    val (graph, n) = swg
-    IndexedSeq.tabulate(n, n)((i, j) => graph(i, j))
-  }
+
 
   // Función para simular la evolución de la opinión
   //type FunctionUpdate = (SpecifieBeliefConf, SpecificWeightedGraph ) => SpecifieBeliefConf // este type lo sugiere el proyecto en la paguina 8 para crear la funciòn simulate
@@ -169,31 +171,31 @@ package object Opinion {
   }
 
   def confBiasUpdatePar(sb: SpecificBelief, swg: SpecificWeightedGraph): SpecificBelief = {
-    val (influencias, _) = swg
+    val NoAgente = sb.size // Número de agentes
+    val InfluenciaAgentes = swg._1 // Matriz de influencias entre agentes
 
-    def computePart(subSb: SpecificBelief): SpecificBelief = {
-      val n = subSb.length
-      (0 until n).map { i =>
-        val suma = (0 until n).map { j =>
-          val dif = subSb(j) - subSb(i)
-          val sesgo = 1 - abs(dif)
-          sesgo * influencias(j, i) * dif.toDouble
-        }.sum
-        subSb(i) + suma / n
-      }.toVector
+    // Calcula la nueva creencia optimizando el cálculo y aplicando truncamiento
+    def actualizarCreencia(i: Int): Double = {
+      val sumaInfluencias = (0 until NoAgente).iterator.filter(j => InfluenciaAgentes(j, i) > 0).map { j =>
+        val diferencia = sb(j) - sb(i)
+        val sesgo = 1 - math.abs(diferencia)
+        sesgo * InfluenciaAgentes(j, i) * diferencia
+      }.sum
+
+      val nuevaCreencia = if (sumaInfluencias != 0) sb(i) + sumaInfluencias / NoAgente else sb(i)
+
+      // Truncar a 4 decimales
+      BigDecimal(nuevaCreencia).setScale(4, BigDecimal.RoundingMode.DOWN).toDouble
     }
 
-    // Dividimos el vector en dos mitades
+    // Divide el trabajo en dos mitades y las ejecuta en paralelo
     val (left, right) = sb.splitAt(sb.length / 2)
 
-    // Procesamos cada mitad en paralelo
     val (resLeft, resRight) = parallel(
-      computePart(left),
-      computePart(right)
+      left.indices.map(actualizarCreencia).toVector,
+      right.indices.map(i => actualizarCreencia(i + left.length)).toVector
     )
 
-    // Combinamos los resultados
     resLeft ++ resRight
   }
-
 }
