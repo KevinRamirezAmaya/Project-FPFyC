@@ -177,11 +177,11 @@ rho4(sb_midly, dist1)
 rho3(sb_midly, dist2)
 rho4(sb_midly, dist2)
 
-// Evaluacion comparativa de la vercion secuencial y concurrente pagina 9
-
+// Evaluacion comparativa de la vercion secuencial y concurrente pagina de rho y rhoPar
+//Caso suministrado por el profesor
 val likert5 = Vector(0.0, 0.25, 0.5, 0.75, 1.0)
 val sbms = for {
-  n <- 2 until 16
+  n <- 2 until 18
   nags = math.pow(2, n).toInt
 } yield midlyBelief(nags)
 
@@ -189,9 +189,54 @@ val polSec = rho(1.2, 1.2)
 val polPar = rhoPar(1.2, 1.2)
 
 val cmp1 = compararMedidasPol(sbms, likert5, polSec, polPar)
+val tiempos = cmp1.map { case (_, _, _, t1, t2, _) => (t1, t2) }
+val resultados = cmp1 .map( t => t ._6)
+
+//Caso con medidas de polarizacion Uniforme
+val likert5 = Vector(0.0, 0.25, 0.5, 0.75, 1.0)
+
+val sbu = for {
+  n <- 2 until 18
+  nags = math.pow(2, n).toInt
+} yield uniformBelief(nags)
+
+val polSec = rho(1.5, 1.5)
+val polPar = rhoPar(1.5, 1.5)
+val cmp1 = compararMedidasPol(sbu, likert5, polSec, polPar)
+//esta funcion crea una tupla con los tiempos de polSeq y polPar
+val tiempos = cmp1.map { case (_, _, _, t1, t2, _) => (t1, t2) }
+val resultados = cmp1 .map( t => t ._6)
+
+//caso con medidas de polarizacion extremas
+val likert5 = Vector(0.0, 0.25, 0.5, 0.75, 1.0)
+val sbae = for {
+  n <- 2 until 18
+  nags = math.pow(2, n).toInt
+} yield allExtremeBelief(nags)
+val polSec = rho(1.6, 1.4)
+val polPar = rhoPar(1.6, 1.4)
+val cmp1 = compararMedidasPol(sbae, likert5, polSec, polPar)
+//esta funcion crea una tupla con los tiempos de polSeq y polPar
+val tiempos = cmp1.map { case (_, _, _, t1, t2, _) => (t1, t2) }
+val resultados = cmp1 .map( t => t ._6)
+
+//Caso con las medidas de polarizacion Triple
+val likert5 = Vector(0.0, 0.25, 0.5, 0.75, 1.0)
+val sbat = for {
+  n <- 2 until 18
+  nags = math.pow(2, n).toInt
+} yield allTripleBelief(nags)
+val polSec = rho(1.75, 1.21)
+val polPar = rhoPar(1.75, 1.21)
+val cmp1 = compararMedidasPol(sbat, likert5, polSec, polPar)
+//esta funcion crea una tupla con los tiempos de polSeq y polPar
+val tiempos = cmp1.map { case (_, _, _, t1, t2, _) => (t1, t2) }
 val resultados = cmp1 .map( t => t ._6)
 
 
+
+//Desde aqui encontramos las pruebas de rendimiento de confbiasUpdate vs confbiasUpdatePar
+// el valor de i2 representa la cantidad de agentes
 // Ejemplo confUpdatePar pagina 10
 val i1_16384 = i1(16384)
 val i2_16384 = i2(16384)

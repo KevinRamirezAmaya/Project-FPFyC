@@ -142,33 +142,51 @@ package object Opinion {
   }
 
   // Versión paralela de rho que representa la medida de polarización entre agentes
+
   def rhoPar(alpha: Double, beta: Double): AgentsPolMeasure = {
-    (specificBelief: SpecificBelief, distributionValues: DistributionValues) => {
-      val numAgents = specificBelief.length
-      val k = distributionValues.length
+    (agentes: SpecificBelief, distribucion: DistributionValues) => {
+      val k = distribucion.length - 1
+      val intervalos = distribucion.zipWithIndex.par.map { case (_, i) =>
+        if (i == 0) {
+          List(distribucion.head, distribucion.tail.head / 2)  // Primer intervalo
+        } else if (0 < i && i < k) {
+          List(
+            (distribucion(i) + distribucion(i - 1)) / 2,
+            (distribucion(i) + distribucion(i + 1)) / 2
+          )
+        } else {
+          List(
+            (distribucion(k - 1) + distribucion(k)) / 2,
+            distribucion(k)
+          )
+        }
+      }.toList
 
-      val firstInterval = (0.0, distributionValues(1)/2)
-      val middleIntervals = (1 to k-2).par.map(i =>
-        ((distributionValues(i)+distributionValues(i-1))/2, (distributionValues(i)+distributionValues(i+1))/2)).toVector
-      val lastInterval = ((distributionValues(k-2)+1)/2, 1.0)
+      val agrupados = intervalos.par.map { interval =>
+        val min = interval.head
+        val max = interval.last
+        if (intervalos.indexOf(interval) < k) {
+          agentes.filter(x => min <= x && x < max)
+        } else {
+          agentes.filter(x => min <= x && x <= max)
+        }
+      }.toList
 
-      val intervals = firstInterval +: middleIntervals :+ lastInterval
+      val pi_b = agrupados.map { grupo =>
+        if (grupo.isEmpty) 0.0
+        else grupo.length.toDouble / agentes.length.toDouble
+      }.toVector
 
-      val emptyClassification = (0 until k).map(i => i -> Vector.empty[Double]).toMap
-      val classification = specificBelief.par.groupBy(a => intervals.zipWithIndex.indexWhere {
-        case ((start, end), i) =>
-          if(i == k-1) (start <= a && a <= end)
-          else (start <= a && a < end)
-      })
-      val finalClassification = (emptyClassification ++ classification).toSeq.sortBy(_._1)
+      val distribution: Distribution = (pi_b, distribucion)
 
-      val frequency = finalClassification.map{ case (i, values) => values.knownSize.toDouble/numAgents}.toVector
+      val rho_b = rhoCMT_Gen(alpha, beta)
+      val norm: MedidaPol = normalizar(rho_b)
 
-      val rhoAux = rhoCMT_Gen(alpha, beta)
-      val normalizarAux = normalizar(rhoAux)
-      normalizarAux((frequency, distributionValues))
+      norm(distribution)
     }
   }
+
+
 
   def confBiasUpdatePar(sb: SpecificBelief, swg: SpecificWeightedGraph): SpecificBelief = {
     val NoAgente = sb.size // Número de agentes
