@@ -192,8 +192,8 @@ package object Opinion {
     val (left, right) = sb.splitAt(sb.length / 2)
 
     val (resLeft, resRight) = parallel(
-      left.indices.map(actualizarCreencia).toVector,
-      right.indices.map(i => actualizarCreencia(i + left.length)).toVector
+      left.indices.par.map(actualizarCreencia).toVector,
+      right.indices.par.map(i => actualizarCreencia(i + left.length)).toVector
     )
 
     resLeft ++ resRight
