@@ -5,8 +5,6 @@ import common._
 
 package object Opinion {
   type SpecificBelief = Vector[Double]
-  //type GenericBeliefConf = Int => SpecificBelief// no se esta empleando
-  //type GenericBelief =  Int => SpecificBeliefConf// este type lo sugiere el proyecto en la paguina 5 pero en la estructura del paquete opinion ya no aparese
   type AgentsPolMeasure = (SpecificBelief, DistributionValues) => Double
 
 
@@ -50,54 +48,54 @@ package object Opinion {
     (agentes: SpecificBelief, distribucion: DistributionValues) => {
       val k = distribucion.length - 1
 
+      // Paso 1: Generar intervalos de la distribución
       val intervalos = distribucion.zipWithIndex.map { case (_, i) =>
-        if (i == 0) List(distribucion.head, distribucion.tail.head / 2)
-        else if (0 < i && i < k) List(
-          (distribucion.drop(i).head + distribucion.drop(i - 1).head) / 2,
-          (distribucion.drop(i).head + distribucion.drop(i + 1).head) / 2
-        )
-        else List(
-          (distribucion.drop(k - 1).head + distribucion.drop(k).head) / 2,
-          distribucion.drop(k).head
-        )
+        if (i == 0)
+          List(distribucion.head, distribucion.tail.head / 2) // Intervalo para el primer punto
+        else if (0 < i && i < k)
+          List(
+            (distribucion.drop(i).head + distribucion.drop(i - 1).head) / 2, // Límite inferior
+            (distribucion.drop(i).head + distribucion.drop(i + 1).head) / 2  // Límite superior
+          )
+        else
+          List(
+            (distribucion.drop(k - 1).head + distribucion.drop(k).head) / 2, // Límite inferior del último intervalo
+            distribucion.drop(k).head // Último punto
+          )
       }
 
+      // Paso 2: Agrupar agentes según los intervalos calculados
       val agrupados = intervalos.map { interval =>
         val min = interval.head
         val max = interval.last
         if (intervalos.indexOf(interval) < k)
-          agentes.filter(x => min <= x && x < max)
+          agentes.filter(x => min <= x && x < max) // Excluye el límite superior para intervalos intermedios
         else
-          agentes.filter(x => min <= x && x <= max)
+          agentes.filter(x => min <= x && x <= max) // Incluye el límite superior en el último intervalo
       }
 
+      // Paso 3: Calcular las frecuencias pi_b
       val pi_b = agrupados.map { grupo =>
-        if (grupo.isEmpty) 0.0
-        else grupo.length.toDouble / agentes.length.toDouble
+        if (grupo.isEmpty) 0.0 // Si no hay agentes en el intervalo, frecuencia es 0
+        else grupo.length.toDouble / agentes.length.toDouble // Proporción de agentes en el intervalo
       }.toVector
 
+      // Paso 4: Construir la distribución de frecuencias y valores
       val distribution: Distribution = (pi_b, distribucion)
-      val rho_b = rhoCMT_Gen(alpha, beta)
-      val norm: MedidaPol = normalizar(rho_b)
 
+      // Paso 5: Calcular la medida de polarización con rhoCMT_Gen y normalizarla
+      val rho_b = rhoCMT_Gen(alpha, beta) // Generar función de polarización con parámetros alpha y beta
+      val norm: MedidaPol = normalizar(rho_b) // Normalizar la medida de polarización
+
+      // Paso 6: Retornar el valor de la medida normalizada para la distribución dada
       norm(distribution)
     }
   }
 
+
   // Tipo de datos de grafo ponderado para evaluar la evolución de la opinión en una red
   type WeightedGraph = (Int, Int) => Double
   type SpecificWeightedGraph = (WeightedGraph, Int)
-  //type GenericWeightedGraph = Int => SpecificWeightedGraph// no se esta empleando
-
-  // Función de influencia tipo 1 pagina 7
-  // def i1(nags: Int): SpecificWeightedGraph = {
-  // ((i: Int, j: Int) => if (i == j) 1.0 else if (i < j) 1.0 / (j - i).toDouble else 0.0, nags)
-  // }
-
-  // Función de influencia tipo 2
-  //def i2(nags: Int): SpecificWeightedGraph = {
-  //((i: Int, j: Int) => if (i == j) 1.0 else if (i < j) (j - i).toDouble / nags.toDouble else (nags - (i - j)).toDouble / nags.toDouble, nags)
-  //}
 
   // Tipo de función para actualizar creencias basada en un grafo ponderado específico
   type FunctionUpdate = (SpecificBelief, SpecificWeightedGraph) => SpecificBelief//el proyecto sugiere SpecificBeliefConf
@@ -127,6 +125,11 @@ package object Opinion {
     sb.indices.map(actualizarCreencia).toVector
   }
 
+  // Función para mostrar el grafo ponderado
+  def showWeightedGraph(swg: SpecificWeightedGraph): IndexedSeq[IndexedSeq[Double]] = {
+    val (graph, n) = swg
+    IndexedSeq.tabulate(n, n)((i, j) => graph(i, j))
+  }
 
   // Función para simular la evolución de la opinión
   //type FunctionUpdate = (SpecifieBeliefConf, SpecificWeightedGraph ) => SpecifieBeliefConf // este type lo sugiere el proyecto en la paguina 8 para crear la funciòn simulate
